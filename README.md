@@ -17,4 +17,6 @@ RabbitMQ config - connect to rabbitmq on port 5672 - default username/password =
     In Admin, create an account called readerG2 with password readerG2 with no privs and allow it to read any queue on virtual host /
 
     docker-compose build demo-message-consumer
-    creates docker container with consumer.py and installs python3.7 (latest) and adds pika for AMQP handling
+        creates docker container with consumer.py and installs python3.7 (latest) and adds pika for AMQP handling
+    docker-compose run --rm demo-message-consumer
+        executes container with python script
