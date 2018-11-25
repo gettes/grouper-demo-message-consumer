@@ -12,31 +12,34 @@ def displayQ(q, body):
 	except:
 		print ("Unexpected error: ", sys.exc_info()[0], "\n", body)
 	else:
-		eventType = str ( pj['esbEvent'][0]['eventType'] )
-		groupName = ""
-		other = ""
-		seq = pj['esbEvent'][0]['sequenceNumber']
-		if eventType.startswith('MEMBERSHIP_') : groupName = pj['esbEvent'][0]['groupName']
-		if eventType.startswith('PRIVILEGE_') : 
-			groupName = pj['esbEvent'][0]['ownerName']
-			other = pj['esbEvent'][0]['privilegeName']
-		if eventType.startswith('GROUP_') : groupName = pj['esbEvent'][0]['name']
-		if len(groupName) > 0 :
-			createdOnMicros = pj["esbEvent"][0]["createdOnMicros"]
-			if eventType.startswith('MEMBERSHIP_') or eventType.startswith('PRIVILEGE_') : 
-				subjectId = pj['esbEvent'][0]['subjectId']
-				print(" %s: %s %s: %s - %s %s" % (q, seq, eventType, groupName, subjectId, other) )
-				if subjectId.startswith('whcurry@ufl.edu') : print(" %s = %s" % ( q, json.dumps(pj, indent=4) ) )
-			else: print(" %s: %s: %s: %s" % (q, seq, eventType, groupName) )
-		else: print(" %s = %s" % (q, json.dumps(pj) ) ) # , sort_keys=True, indent=4)
+		for event in pj['esbEvent'] :
+			eventType = str ( event['eventType'] )
+			groupName = ""; other = ""
+			seq = event['sequenceNumber']
+			crTime = ( event['createdOnMicros'] / 1000 ) / 1000
+			timenow = time.time(); diff = int(timenow - crTime)
+			print("%s-%s: transit=%s " % ( time.strftime('%Y/%m/%d-%H:%M:%S', time.localtime()), time.strftime('%Y/%m/%d-%H:%M:%S', time.localtime(crTime)), time.strftime('%H:%M:%S', time.gmtime(diff)) ), end='' )
+			if eventType.startswith('MEMBERSHIP_') : groupName = event['groupName']
+			if eventType.startswith('PRIVILEGE_') : 
+				groupName = event['ownerName']
+				other = event['privilegeName']
+			if eventType.startswith('GROUP_') : groupName = event['name']
+			if len(groupName) > 0 :
+				createdOnMicros = event["createdOnMicros"]
+				if eventType.startswith('MEMBERSHIP_') or eventType.startswith('PRIVILEGE_') : 
+					subjectId = event['subjectId']
+					print("%s: %s: %s: %s - %s %s" % (q, seq, eventType, groupName, subjectId, other) )
+					if subjectId.startswith('whcurry@ufl.edu') : print("%s = %s" % ( q, json.dumps(pj, indent=4) ) )
+				else: print("%s: %s: %s: %s" % (q, seq, eventType, groupName) )
+			else: print("%s = %s" % (q, json.dumps(pj) ) ) # , sort_keys=True, indent=4)
 def q0(ch, method, properties, body):
-	displayQ(" ** Grouper", body);
+	displayQ("** Grouper", body);
 	ch.basic_ack(delivery_tag = method.delivery_tag)
 def q2(ch, method, properties, body):
-	displayQ(" ** q1", body);
+	displayQ("** G2", body);
 	ch.basic_ack(delivery_tag = method.delivery_tag)
 def q3(ch, method, properties, body):
-	displayQ(" ** q2", body);
+	displayQ("** G3", body);
 	ch.basic_ack(delivery_tag = method.delivery_tag)
 def connectmq(parameters):
 	global connection, channel
@@ -55,10 +58,12 @@ def connectmq(parameters):
 
 try:
 	connectmq(parameters)
-	print(' [*] Waiting for messages. To exit press CTRL+C')
+	print(' [*] Ready Player One...')
 	channel.start_consuming()
 except KeyboardInterrupt:
 	connection.close()
 	print ("keyboard ouch.")
-except:
-	print ("ouch.", sys.exc_info()[0])
+except Exception as e:
+	if connection != 0 : connection.close()
+	print ("\n", e, "\nouch.")
+	sys.exit(1)
